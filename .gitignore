@@ -1,0 +1,5 @@
+.env
+node_modules/
+exploration/
+receipts/
+results/

@@ -1,0 +1,17 @@
+{
+  "name": "autodarwin",
+  "version": "1.0.0",
+  "description": "Automated claim submission for Perquisite RewardCentre",
+  "type": "module",
+  "scripts": {
+    "explore": "node scripts/explore.js",
+    "process-receipts": "node scripts/process-receipts.js",
+    "submit-claims": "node scripts/submit-claims.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
+    "dotenv": "^17.2.4",
+    "playwright": "^1.55.0",
+    "tesseract.js": "^5.1.0"
+  }
+}
