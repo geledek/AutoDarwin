@@ -3,3 +3,6 @@ node_modules/
 exploration/
 receipts/
 results/
+config/
+claims-data.json
+.DS_Store

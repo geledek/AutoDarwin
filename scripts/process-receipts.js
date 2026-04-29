@@ -8,6 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, '..');
 const RECEIPTS_DIR = process.argv[2] || join(PROJECT_ROOT, 'receipts');
 const OUTPUT_FILE = join(PROJECT_ROOT, 'claims-data.json');
+const CONFIG_FILE = join(PROJECT_ROOT, 'config', 'spending-account-config.json');
 
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -19,13 +20,51 @@ const SUPPORTED_TYPES = {
   '.pdf': 'application/pdf'
 };
 
-const EXTRACTION_PROMPT = `You are an expert at reading medical receipts and invoices from Singapore clinics and healthcare providers.
+// Load claim type names from config if available, otherwise use fallback defaults
+async function getClaimTypeList() {
+  try {
+    const raw = await readFile(CONFIG_FILE, 'utf-8');
+    const config = JSON.parse(raw);
+    const types = Object.keys(config.claimTypes || {});
+    if (types.length > 0) {
+      console.log(`  Using ${types.length} claim types from config/spending-account-config.json`);
+      return types;
+    }
+  } catch {}
+
+  console.log('  Using default claim type list (run discover-config.js for exact names)');
+  return [
+    'MSA - Medical Claim for GP and Specialist',
+    'MSA - Medical Claim',
+    'MSA - Physiotherapy/Developmental Therapy and Others',
+    'MSA - Traditional Chinese Medicine',
+    'MSA - Alternative Medicine',
+    'MSA - Dental Claim',
+    'MSA - Vision Expenses',
+  ];
+}
+
+function buildExtractionPrompt(claimTypes) {
+  const typeList = claimTypes.join(' | ');
+  const typeExamples = claimTypes.map(t => {
+    const tl = t.toLowerCase();
+    if (tl.includes('gp') || tl.includes('specialist')) return `  - GP visits, specialist visits → "${t}"`;
+    if (tl.includes('physiotherapy') || tl.includes('developmental')) return `  - Physiotherapy, chiropractic, occupational therapy → "${t}"`;
+    if (tl.includes('traditional chinese') || tl.includes('tcm')) return `  - TCM, acupuncture, chinese herbs → "${t}"`;
+    if (tl.includes('alternative')) return `  - Naturopathy, homeopathy, ayurvedic → "${t}"`;
+    if (tl.includes('dental')) return `  - Dental work → "${t}"`;
+    if (tl.includes('vision')) return `  - Eye care, glasses, contacts → "${t}"`;
+    if (tl.includes('medical claim') && !tl.includes('gp')) return `  - General medical expenses → "${t}"`;
+    return null;
+  }).filter(Boolean).join('\n');
+
+  return `You are an expert at reading medical receipts and invoices from Singapore clinics and healthcare providers.
 
 Extract the following information from this receipt/invoice. Return ONLY valid JSON, no markdown.
 
 {
   "claimant": "Patient name (look for 'Patient Name', 'Name', or the person the bill is addressed to)",
-  "claim_type": "One of: MSA - Medical Claim for GP and Specialist | MSA - Physiotherapy/Developmental Therapy and Others | MSA - Traditional Chinese Medicine | MSA - Alternative Medicine | MSA - Dental Claim | MSA - Vision Expenses | Medical expenses | Dental Expenses | Health Screening expenses | Alternative medicine | Traditional Chinese Medicine | Recreation, sports & fitness | Broadband",
+  "claim_type": "One of: ${typeList}",
   "clinic_provider": "Clinic or healthcare provider name",
   "receipt_date_dd": "Day as 2-digit string e.g. '15'",
   "receipt_date_mm": "Month as 2-digit string e.g. '03'",
@@ -41,17 +80,12 @@ Important rules:
 - For "claimant", extract the PATIENT name, not the clinic name
 - For "receipt_amount", always use the TOTAL amount (including GST/tax)
 - For "claim_type", match the service to the most appropriate category:
-  - GP visits, specialist visits → "MSA - Medical Claim for GP and Specialist"
-  - Physiotherapy, chiropractic, occupational therapy → "MSA - Physiotherapy/Developmental Therapy and Others"
-  - TCM, acupuncture, chinese herbs → "MSA - Traditional Chinese Medicine"
-  - Naturopathy, homeopathy, ayurvedic → "MSA - Alternative Medicine"
-  - Dental work → "MSA - Dental Claim"
-  - Eye care, glasses, contacts → "MSA - Vision Expenses"
-  - Gym, fitness, sports → "Recreation, sports & fitness"
-  - Broadband/internet bills → "Broadband"
-  - Health checkups → "Health Screening expenses"
+${typeExamples}
 - If you can't determine a field, set it to null
 - Return ONLY the JSON object, no explanation`;
+}
+
+let EXTRACTION_PROMPT;
 
 async function extractReceiptData(filePath) {
   const ext = extname(filePath).toLowerCase();
@@ -140,6 +174,10 @@ async function main() {
   console.log('📋 AutoDarwin Receipt Processor\n');
   console.log(`  Receipts folder: ${RECEIPTS_DIR}`);
   console.log(`  Model: ${CLAUDE_MODEL}`);
+
+  // Build extraction prompt from config (or defaults)
+  const claimTypes = await getClaimTypeList();
+  EXTRACTION_PROMPT = buildExtractionPrompt(claimTypes);
 
   // Check if receipts folder exists
   try {
