@@ -38,9 +38,12 @@ const CLAIMS_FILE = process.argv[2] || join(PROJECT_ROOT, 'claims-data.json');
 const RESULTS_DIR = join(PROJECT_ROOT, 'results');
 const CONFIG_FILE = join(PROJECT_ROOT, 'config', 'spending-account-config.json');
 
-const SSO_URL = process.env.BENEFIT_WEBSITE_URL ||
-  'https://launcher.myapps.microsoft.com/api/signin/69d6213e-353b-4ef1-827e-cc6c1df53281?tenantId=42f7676c-f455-423c-82f6-dc2d99791af7';
-const CHROME_PROFILE = '/Users/I311008/Library/Application Support/Google/Chrome-Automation';
+const SSO_URL = process.env.BENEFIT_WEBSITE_URL;
+if (!SSO_URL) {
+  console.log('❌ BENEFIT_WEBSITE_URL not set in .env');
+  process.exit(1);
+}
+const CHROME_PROFILE = process.env.CHROME_PROFILE || join(process.env.HOME, 'Library/Application Support/Google/Chrome-Automation');
 
 // ─── Config loader ────────────────────────────────────────────────────────────
 

@@ -9,10 +9,9 @@ const PROJECT_ROOT = join(__dirname, '..');
 const CLAIMS_FILE = process.argv[2] || join(PROJECT_ROOT, 'claims-data.json');
 const RESULTS_DIR = join(PROJECT_ROOT, 'results');
 
-const SSO_URL = process.env.BENEFIT_WEBSITE_URL ||
-  'https://launcher.myapps.microsoft.com/api/signin/69d6213e-353b-4ef1-827e-cc6c1df53281?tenantId=42f7676c-f455-423c-82f6-dc2d99791af7';
-const CHROME_PROFILE = '/Users/I311008/Library/Application Support/Google/Chrome-Automation';
-const BASE_URL = 'https://ssl2.perquisite.net/RewardCentre/M/RC';
+const SSO_URL = process.env.BENEFIT_WEBSITE_URL;
+const CHROME_PROFILE = process.env.CHROME_PROFILE || join(process.env.HOME, 'Library/Application Support/Google/Chrome-Automation');
+const BASE_URL = process.env.DARWIN_BASE_URL || 'https://ssl2.perquisite.net/RewardCentre/M/RC';
 
 let stepCounter = 0;
 async function ss(page, name) {

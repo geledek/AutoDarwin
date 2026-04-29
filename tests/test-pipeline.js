@@ -128,13 +128,13 @@ async function main() {
     const multiClaims = JSON.stringify([
       {
         file: 'receipt-a.pdf', filePath: '/tmp/receipt-a.pdf',
-        claimant: 'Jianglei Han', claimType: 'FSA - Dental Expenses',
+        claimant: 'Test User', claimType: 'FSA - Dental Expenses',
         clinicProvider: 'Dental Clinic', receiptDate: { dd: '01', mm: '03', yyyy: '2026' },
         receiptAmount: 150, receiptNumber: 'D-001'
       },
       {
         file: 'receipt-b.pdf', filePath: '/tmp/receipt-b.pdf',
-        claimant: 'Suling Nie', claimType: 'FSA - Veterinary Medical Fees',
+        claimant: 'Test Spouse', claimType: 'FSA - Veterinary Medical Fees',
         clinicProvider: 'Vet Clinic', receiptDate: { dd: '15', mm: '03', yyyy: '2026' },
         receiptAmount: 500, receiptNumber: 'V-002'
       }
@@ -145,8 +145,8 @@ async function main() {
 
     const data5 = JSON.parse(await readFile(CLAIMS_FILE, 'utf-8'));
     assert(data5.claims.length === 2, '2 claims written');
-    assert(data5.claims[0].claimant === 'Jianglei Han', 'first claim claimant correct');
-    assert(data5.claims[1].claimant === 'Suling Nie', 'second claim claimant correct');
+    assert(data5.claims[0].claimant === 'Test User', 'first claim claimant correct');
+    assert(data5.claims[1].claimant === 'Test Spouse', 'second claim claimant correct');
 
   } finally {
     // Restore backup

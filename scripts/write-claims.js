@@ -15,7 +15,7 @@
  *   {
  *     "file": "receipt.pdf",
  *     "filePath": "/absolute/path/to/receipt.pdf",
- *     "claimant": "Jianglei Han",
+ *     "claimant": "Patient Name",
  *     "claimType": "FSA - Veterinary Medical Fees",
  *     "clinicProvider": "Island Vet Clinic",
  *     "receiptDate": { "dd": "03", "mm": "03", "yyyy": "2026" },

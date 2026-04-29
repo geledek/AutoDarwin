@@ -2,7 +2,7 @@
 
 ## Base URL
 
-`https://ssl2.perquisite.net/RewardCentre`
+Configured via `DARWIN_BASE_URL` env var (default: `https://ssl2.perquisite.net/RewardCentre`).
 
 All paths below are relative to the base URL.
 
@@ -123,8 +123,8 @@ Response on success: `200` with:
   "benefitPeriodName": "Benefit_Year_2026",
   "dependantID": "uuid or null (self)",
   "claimTypeID": "uuid",
-  "claimantFirstName": "Jianglei",
-  "claimantLastName": "Han",
+  "claimantFirstName": "FirstName",
+  "claimantLastName": "LastName",
   "claimSubType1ID": "",
   "claimSubType2ID": "",
   "claimSubType3ID": "",

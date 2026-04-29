@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Automated SAP FlexiBen claim submission pipeline — OCR receipts, discover form config, submit claims via API, track in Excel.",
   "author": {
-    "name": "Jianglei Han"
+    "name": "AutoDarwin Contributors"
   },
   "license": "MIT",
   "keywords": ["flexiben", "claims", "receipts", "darwin", "SAP", "expense"]
