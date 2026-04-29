@@ -13,9 +13,9 @@ Automated SAP FlexiBen (Darwin) claim submission pipeline. OCR your receipts, au
 
 - **Node.js** v18+
 - **Google Chrome** installed (used for SSO authentication)
-- **Anthropic API key** (for receipt OCR via Claude Vision)
 - **Python 3** with Pillow (`pip install Pillow`) — for JPEG/PNG to PDF conversion
 - **SAP FlexiBen account** with SpendingAccount feature enabled
+- **Anthropic API key** — only needed for batch mode (`process-receipts.js`); not needed when using Claude Code interactively
 
 ## Setup
 
@@ -31,7 +31,15 @@ On first run, Chrome will open for Microsoft SSO login. A persistent Chrome prof
 
 ## Usage
 
-### Step 1: Discover Configuration (run once)
+### Interactive Mode (via Claude Code — no API key needed)
+
+Just say: `"submit this receipt /path/to/receipt.pdf"` or use `/submit-claims /path/to/file`
+
+Claude Code reads the receipt directly (native vision), extracts the data, and submits via the API. No Anthropic API key required.
+
+### Scripted Mode
+
+#### Step 1: Discover Configuration (run once)
 
 ```bash
 node scripts/discover-config.js
@@ -45,15 +53,17 @@ Re-run when benefit periods change (e.g., new year).
 
 ### Step 2: Process Receipts
 
+**Option A — Interactive (no API key):**
+Use Claude Code to read the receipt and write claims data:
+```bash
+# Claude reads the file, then calls:
+node scripts/write-claims.js '[{"file":"receipt.pdf","filePath":"/path/receipt.pdf","claimType":"...","receiptAmount":260,...}]'
+```
+
+**Option B — Batch (requires ANTHROPIC_API_KEY):**
 ```bash
 node scripts/process-receipts.js [receipts-folder]
 ```
-
-- Default folder: `./receipts/`
-- Reads each PDF/JPG/PNG, sends to Claude Vision API for OCR
-- Extracts: claimant, claim type, provider, date, amount, receipt number
-- Outputs: `claims-data.json`
-- Accumulates across runs (only processes new files)
 
 ### Step 3: Submit Claims
 
@@ -69,11 +79,19 @@ AUTO_SUBMIT=true node scripts/api-submit-claims.js
 - For each pending claim: upload PDF → ValidateClaims → UpdateClaims
 - Results saved to `results/api-submission-results.json`
 
-### Quick One-Liner
+### Quick One-Liner (batch mode)
 
 ```bash
 cp ~/receipts/*.pdf receipts/ && node scripts/process-receipts.js && AUTO_SUBMIT=true node scripts/api-submit-claims.js
 ```
+
+## Testing
+
+```bash
+node tests/test-pipeline.js
+```
+
+Validates: write-claims.js, duplicate detection, input validation, config structure.
 
 ## Important Notes
 
@@ -135,9 +153,9 @@ AutoDarwin/
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | Claude API key for receipt OCR |
+| `ANTHROPIC_API_KEY` | Only for batch mode | Claude API key for `process-receipts.js` |
 | `AUTO_SUBMIT` | No | Set to `true` to actually submit (default: dry run) |
-| `CLAUDE_MODEL` | No | Model for OCR (default: `claude-sonnet-4-5-20250929`) |
+| `CLAUDE_MODEL` | No | Model for batch OCR (default: `claude-sonnet-4-5-20250929`) |
 | `BENEFIT_WEBSITE_URL` | No | SSO launcher URL (has default for SAP) |
 
 ## License

@@ -30,8 +30,9 @@ All scripts and config live at `${CLAUDE_PLUGIN_ROOT}`.
 | Script | Purpose | When to Run |
 |--------|---------|-------------|
 | `scripts/discover-config.js` | Auto-discover claim types, claimants, benefit periods via CDP | Once initially, or when config changes |
-| `scripts/process-receipts.js` | OCR receipts via Claude API, output `claims-data.json` | When new receipts are added |
-| `scripts/api-submit-claims.js` | Upload + validate + submit claims via page-context API | After processing receipts |
+| `scripts/write-claims.js` | Write extracted claim data to `claims-data.json` | After reading receipts (called by Claude) |
+| `scripts/api-submit-claims.js` | Upload + validate + submit claims via page-context API | After writing claims |
+| `scripts/process-receipts.js` | Batch OCR via Anthropic API (optional, needs API key) | Only for headless/batch mode |
 
 ## Workflow
 
@@ -47,17 +48,21 @@ Opens real Chrome via SSO, intercepts `SpendingAccount/Load` API via CDP, and sa
 
 Re-run when claim types or benefit periods change (e.g., new year).
 
-### 2. Process Receipts (OCR)
+### 2. Read Receipts and Extract Data (Claude does this)
 
+Claude Code reads each receipt file using its native PDF/image vision. No API key needed.
+Extract: claimant, claim type (match exact name from config), provider, date, amount, receipt number.
+
+Then write to claims-data.json:
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/process-receipts.js [receipts-folder]
+node ${CLAUDE_PLUGIN_ROOT}/scripts/write-claims.js '[{...extracted data...}]'
 ```
 
-- Default receipts folder: `${CLAUDE_PLUGIN_ROOT}/receipts/`
-- Reads claim type names from `config/spending-account-config.json` for accurate matching
-- Outputs: `claims-data.json` with extracted claim data per receipt
-- Supports: PDF, JPG, JPEG, PNG
-- Accumulates across runs (only processes new files)
+The `write-claims.js` script:
+- Accepts JSON array of claims from CLI arg or stdin
+- Merges with existing `claims-data.json` (skips duplicates by filename)
+- Validates required fields
+- Sets status to "pending"
 
 ### 3. Submit Claims
 
@@ -73,6 +78,14 @@ AUTO_SUBMIT=true node ${CLAUDE_PLUGIN_ROOT}/scripts/api-submit-claims.js
 - For each pending claim: upload file -> ValidateClaims -> UpdateClaims
 - Reads `__RequestVerificationToken` from hidden input for CSRF
 - Results saved to `results/api-submission-results.json`
+
+### Alternative: Batch Mode (requires ANTHROPIC_API_KEY)
+
+For headless batch processing without Claude Code in the loop:
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/process-receipts.js [receipts-folder]
+```
+This calls the Anthropic API directly for OCR. Requires `ANTHROPIC_API_KEY` in `.env`.
 
 ### 4. Update Excel Tracker
 
@@ -126,17 +139,18 @@ Use openpyxl (Python) to read/write the Excel file. Keep only submission-relevan
 ## Quick Reference: Common Commands
 
 ```bash
-# Full pipeline for new receipts
-cp ~/receipts/*.pdf ${CLAUDE_PLUGIN_ROOT}/receipts/
-node ${CLAUDE_PLUGIN_ROOT}/scripts/process-receipts.js
+# Write claims (after Claude reads receipts)
+node ${CLAUDE_PLUGIN_ROOT}/scripts/write-claims.js '[{"file":"x.pdf","filePath":"/path/x.pdf","claimType":"...","receiptAmount":260,"receiptDate":{"dd":"01","mm":"03","yyyy":"2026"},"claimant":"...","clinicProvider":"...","receiptNumber":"..."}]'
+
+# Submit claims
 AUTO_SUBMIT=true node ${CLAUDE_PLUGIN_ROOT}/scripts/api-submit-claims.js
 
 # Refresh config (new year or type changes)
 node ${CLAUDE_PLUGIN_ROOT}/scripts/discover-config.js
 
-# Check what's been submitted
-cat ${CLAUDE_PLUGIN_ROOT}/claims-data.json | node -e "
-  const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
-  d.claims.forEach(c=>console.log(c.file, c.status, c.reference||''))
-"
+# Batch mode (needs ANTHROPIC_API_KEY)
+node ${CLAUDE_PLUGIN_ROOT}/scripts/process-receipts.js [folder]
+
+# Run tests
+node ${CLAUDE_PLUGIN_ROOT}/tests/test-pipeline.js
 ```
