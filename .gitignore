@@ -6,4 +6,6 @@ results/
 config/
 claims-data.json
 .DS_Store
-skills/flexiben-claims/references/claim-types.md
+
+# Personal skill — contains hardcoded personal data, not for publishing
+skills/flexiben-claims/
